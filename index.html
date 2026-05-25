@@ -315,6 +315,139 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px
   .mi{color:#000;border-bottom:1px solid #ccc}
   .ml{color:#666}
 }
+
+/* ── MOBILE CONTROLS ──────────────────────────────────────────────────────── */
+.mob-sidebar-btn{
+  display:none;align-items:center;gap:5px;
+  background:rgba(255,255,255,.06);border:1px solid var(--border);
+  border-radius:6px;padding:6px 11px;color:var(--text-mid);
+  font-family:var(--fu);font-size:11px;font-weight:700;letter-spacing:.05em;
+  cursor:pointer;transition:all .2s;white-space:nowrap;
+}
+.mob-sidebar-btn:hover{color:var(--text-light);border-color:var(--border-s)}
+.mob-hdr-btns{display:none;gap:6px;margin-left:auto}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:90}
+.mob-overlay.open{display:block}
+.mob-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;height:56px;
+  background:linear-gradient(0deg,var(--navy-mid) 0%,var(--navy) 100%);
+  border-top:1px solid var(--border);z-index:80;
+}
+.mob-nav-inner{display:flex;height:100%;align-items:stretch}
+.mob-nav-btn{
+  flex:1;background:none;border:none;color:var(--text-mid);
+  font-family:var(--fu);font-size:9px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;padding:4px 2px;transition:color .2s;border-right:1px solid var(--border);
+}
+.mob-nav-btn:last-child{border-right:none}
+.mob-nav-btn.active{color:var(--gold-light)}
+.mob-icon{font-size:17px;line-height:1}
+
+/* ── TABLET (≤1024px) ───────────────────────────────────────────────────── */
+@media(max-width:1024px){
+  .sidebar-left{width:228px}
+  .sidebar-right{width:238px}
+  .editor-section{padding:24px 36px}
+  .sermon-meta{padding:16px 22px 12px}
+  #btn-print,#btn-export{display:none}
+}
+
+/* ── MOBILE (≤768px) ────────────────────────────────────────────────────── */
+@media(max-width:768px){
+  html,body{overflow:auto;height:auto}
+  #app{height:auto;min-height:100dvh;display:flex;flex-direction:column;padding-bottom:56px}
+
+  /* Header */
+  header{height:52px;padding:0 12px;gap:0}
+  .brand-sub{display:none}
+  .brand-name{font-size:15px}
+  .main-nav{display:none}
+  .hdr{display:none}
+  .mob-hdr-btns{display:flex}
+
+  /* Views */
+  .view{display:none;flex-direction:column;height:auto;min-height:calc(100dvh - 108px);overflow:visible}
+  .view.active{display:flex}
+
+  /* Sidebars → drawers */
+  .sidebar-left{
+    position:fixed;left:-290px;top:52px;bottom:56px;width:285px;
+    z-index:95;transition:left .28s ease;
+    box-shadow:6px 0 32px rgba(0,0,0,.7);overflow-y:auto;flex-shrink:0;
+  }
+  .sidebar-left.mob-open{left:0}
+  .sidebar-right{
+    position:fixed;right:-290px;top:52px;bottom:56px;width:285px;
+    z-index:95;transition:right .28s ease;
+    box-shadow:-6px 0 32px rgba(0,0,0,.7);overflow-y:auto;flex-shrink:0;
+  }
+  .sidebar-right.mob-open{right:0}
+
+  /* Editor — coluna única */
+  #view-editor{flex-direction:column;height:auto;overflow:visible}
+  .editor-main{flex:1;overflow:visible;height:auto;display:flex;flex-direction:column}
+  .editor-sections{flex:1;overflow:visible;height:auto}
+  .editor-section{
+    display:none;min-height:50vh;padding:18px 14px;
+    font-size:18px;line-height:1.85;overflow:visible;height:auto;
+  }
+  .editor-section.active{display:block}
+
+  /* Metadata */
+  .sermon-meta{padding:14px 14px 12px}
+  #sermon-title{font-size:21px;margin-bottom:10px}
+  .meta-row{flex-direction:column;gap:10px;flex-wrap:nowrap}
+  .mf{min-width:100%!important;flex:none;max-width:100%!important}
+
+  /* Abas sticky */
+  .section-tabs{padding:0 8px;position:sticky;top:52px;z-index:8;background:var(--parchment-mid)}
+  .section-tab{padding:10px 10px;font-size:11px;letter-spacing:.04em}
+
+  /* Toolbar com scroll horizontal */
+  .editor-toolbar{
+    padding:5px 8px;overflow-x:auto;flex-wrap:nowrap;
+    position:sticky;top:calc(52px + 40px);z-index:7;
+  }
+  .editor-toolbar::-webkit-scrollbar{display:none}
+
+  /* Library */
+  .lib-hdr{padding:14px 16px;flex-wrap:wrap;gap:8px}
+  .lib-title{font-size:16px}
+  .lib-grid{padding:12px;grid-template-columns:1fr;gap:12px}
+
+  /* Timer */
+  #view-timer{padding:40px 20px;gap:16px}
+  .tfd{font-size:64px}
+  .tfl{font-size:9px;letter-spacing:.3em;margin-bottom:28px}
+  .tfc{flex-wrap:wrap;justify-content:center;margin-bottom:28px;gap:8px}
+  .tfc .btn{padding:10px 22px}
+  .ts-box{flex-direction:column;padding:14px 22px;gap:12px;text-align:center}
+  .lap-list{width:100%;max-width:320px}
+
+  /* AI */
+  #view-ai{overflow:visible!important;height:auto}
+  #view-ai>div{flex-direction:column!important;overflow:visible!important;height:auto}
+  #view-ai>div>div:first-child{
+    width:100%!important;border-right:none!important;
+    border-bottom:1px solid var(--border);overflow-y:visible!important;max-height:none!important;
+  }
+  #view-ai>div>div:last-child{min-height:50vh;display:flex;flex-direction:column}
+  #ai-chat{min-height:300px}
+  #ai-input-bar{padding:10px 12px!important}
+
+  /* Bottom nav */
+  .mob-nav{display:block}
+}
+
+/* ── TELAS PEQUENAS (≤480px) ─────────────────────────────────────────────── */
+@media(max-width:480px){
+  .tfd{font-size:52px}
+  .editor-section{padding:14px 12px;font-size:17px;line-height:1.8}
+  .section-tab{padding:9px 8px;font-size:10px}
+  .editor-toolbar .ts{display:none}
+}
 </style>
 </head>
 <body>
@@ -343,7 +476,21 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px
     <button class="btn btn-g" id="btn-export">Exportar .txt</button>
     <button class="btn btn-gold" id="btn-save">Salvar (Ctrl+S)</button>
   </div>
+  <div class="mob-hdr-btns">
+    <button class="mob-sidebar-btn" id="mob-left-toggle">☰ Bíblia</button>
+    <button class="mob-sidebar-btn" id="mob-right-toggle">⏱ Ferramentas</button>
+  </div>
 </header>
+
+<div class="mob-overlay" id="mob-overlay"></div>
+<nav class="mob-nav">
+  <div class="mob-nav-inner">
+    <button class="mob-nav-btn active" data-view="editor"><span class="mob-icon">✍</span><span>Editor</span></button>
+    <button class="mob-nav-btn" data-view="library"><span class="mob-icon">📚</span><span>Biblioteca</span></button>
+    <button class="mob-nav-btn" data-view="timer"><span class="mob-icon">⏱</span><span>Timer</span></button>
+    <button class="mob-nav-btn" data-view="ai"><span class="mob-icon" style="color:var(--gold)">✦</span><span>IA</span></button>
+  </div>
+</nav>
 
 <!-- EDITOR VIEW -->
 <div id="view-editor" class="view active">
@@ -1795,6 +1942,43 @@ $('s-date').value=new Date().toISOString().split('T')[0];
 initBible();initAI();
 updOutline();updStats();updCheck();updStatus();updTimer();renderBank();renderNotes();renderTags();
 setTimeout(()=>toast('Bem-vindo ao Púlpito — Que Deus abençoe sua pregação!','success'),600);
+
+// ── MOBILE ────────────────────────────────────────────────────────────────────
+(function(){
+  const ls=document.querySelector('.sidebar-left');
+  const rs=document.querySelector('.sidebar-right');
+  const ov=document.getElementById('mob-overlay');
+  function closeAll(){ls?.classList.remove('mob-open');rs?.classList.remove('mob-open');ov?.classList.remove('open')}
+  document.getElementById('mob-left-toggle')?.addEventListener('click',()=>{
+    const o=ls?.classList.toggle('mob-open');rs?.classList.remove('mob-open');ov?.classList.toggle('open',!!o);
+  });
+  document.getElementById('mob-right-toggle')?.addEventListener('click',()=>{
+    const o=rs?.classList.toggle('mob-open');ls?.classList.remove('mob-open');ov?.classList.toggle('open',!!o);
+  });
+  ov?.addEventListener('click',closeAll);
+  document.querySelectorAll('.mob-nav-btn').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const v=b.dataset.view;
+      document.querySelectorAll('.mob-nav-btn').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.main-nav button').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      const nb=document.querySelector(`.main-nav button[data-view="${v}"]`);
+      if(nb)nb.classList.add('active');
+      const vEl=document.getElementById('view-'+v);
+      if(vEl)vEl.classList.add('active');
+      if(v==='library')renderLib();
+      closeAll();
+      window.scrollTo(0,0);
+    });
+  });
+  document.querySelectorAll('.main-nav button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const v=b.dataset.view;
+      document.querySelectorAll('.mob-nav-btn').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
+    });
+  });
+})();
 </script>
 </body>
 </html>
