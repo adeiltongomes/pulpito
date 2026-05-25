@@ -326,6 +326,14 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px
 }
 .mob-sidebar-btn:hover{color:var(--text-light);border-color:var(--border-s)}
 .mob-hdr-btns{display:none;gap:6px;margin-left:auto}
+.mob-save-btn{
+  display:none;align-items:center;gap:4px;
+  background:linear-gradient(135deg,#b8922e,var(--gold) 50%,var(--gold-light));
+  border:none;border-radius:6px;padding:6px 13px;
+  font-family:var(--fu);font-size:11px;font-weight:700;letter-spacing:.05em;
+  color:var(--navy);cursor:pointer;white-space:nowrap;
+  box-shadow:0 2px 8px rgba(201,168,76,.3);
+}
 .mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:90}
 .mob-overlay.open{display:block}
 .mob-nav{
@@ -366,6 +374,8 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px
   .main-nav{display:none}
   .hdr{display:none}
   .mob-hdr-btns{display:flex}
+  .mob-sidebar-btn{display:flex}
+  .mob-save-btn{display:flex}
 
   /* Views */
   .view{display:none;flex-direction:column;height:auto;min-height:calc(100dvh - 108px);overflow:visible}
@@ -396,10 +406,13 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px
   .editor-section.active{display:block}
 
   /* Metadata */
-  .sermon-meta{padding:14px 14px 12px}
-  #sermon-title{font-size:21px;margin-bottom:10px}
-  .meta-row{flex-direction:column;gap:10px;flex-wrap:nowrap}
+  .sermon-meta{padding:12px 14px 10px}
+  #sermon-title{font-size:18px;margin-bottom:8px}
+  .meta-row{flex-direction:column;gap:8px;flex-wrap:nowrap}
   .mf{min-width:100%!important;flex:none;max-width:100%!important}
+  .ml{font-size:10px}
+  .mi{font-size:14px;padding:4px 0}
+  input[type=date].mi{text-align:left}
 
   /* Abas sticky */
   .section-tabs{padding:0 8px;position:sticky;top:52px;z-index:8;background:var(--parchment-mid)}
@@ -478,7 +491,8 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px
   </div>
   <div class="mob-hdr-btns">
     <button class="mob-sidebar-btn" id="mob-left-toggle">☰ Bíblia</button>
-    <button class="mob-sidebar-btn" id="mob-right-toggle">⏱ Ferramentas</button>
+    <button class="mob-save-btn" id="mob-btn-save">Salvar</button>
+    <button class="mob-sidebar-btn" id="mob-right-toggle">⏱ Tools</button>
   </div>
 </header>
 
@@ -1978,6 +1992,7 @@ setTimeout(()=>toast('Bem-vindo ao Púlpito — Que Deus abençoe sua pregação
       document.querySelectorAll('.mob-nav-btn').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
     });
   });
+  document.getElementById('mob-btn-save')?.addEventListener('click',save);
 })();
 </script>
 </body>
