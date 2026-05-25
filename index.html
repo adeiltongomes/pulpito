@@ -476,6 +476,10 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px
       <div class="brand-sub">Plataforma de Pregação</div>
     </div>
   </div>
+  <div id="sync-indicator" style="display:none;align-items:center;gap:5px;font-size:10px;color:var(--text-mid);letter-spacing:.06em">
+    <span id="sync-dot" style="width:6px;height:6px;border-radius:50%;background:var(--gold);display:inline-block;animation:spin 1s linear infinite"></span>
+    <span id="sync-label">Sincronizando…</span>
+  </div>
   <nav class="main-nav">
     <button class="active" data-view="editor">Editor</button>
     <button data-view="library">Biblioteca</button>
@@ -1431,9 +1435,8 @@ async function mergeWithCloud(){
 }
 
 // ── LIBRARY ───────────────────────────────────────────────────────────────────
-async function renderLib(){
-  $('lib-grid').innerHTML=`<div style="text-align:center;padding:60px 30px;color:var(--gold);font-family:var(--fd);font-size:11px;letter-spacing:.12em;opacity:.8">☁ SINCRONIZANDO…</div>`;
-  const lib=await mergeWithCloud();
+function renderLibLocal(){
+  const lib=getLib();
   $('lib-count').textContent=`${lib.length} sermão${lib.length!==1?'s':''}`;
   if(!lib.length){
     $('lib-grid').innerHTML=`<div class="empty-lib"><div class="empty-lib-icon">+</div><h3>Nenhum sermão salvo ainda</h3><p style="font-size:13px">Crie e salve seu primeiro sermão para vê-lo aqui.</p></div>`;
@@ -1460,6 +1463,11 @@ async function renderLib(){
       </div>
     </div>`;
   }).join('');
+}
+async function renderLib(){
+  $('lib-grid').innerHTML=`<div style="text-align:center;padding:60px 30px;color:var(--gold);font-family:var(--fd);font-size:11px;letter-spacing:.12em;opacity:.8">☁ SINCRONIZANDO…</div>`;
+  await mergeWithCloud();
+  renderLibLocal();
 }
 function openSermon(id){
   const s=getLib().find(x=>x.id===id);
@@ -1988,6 +1996,40 @@ $('s-date').value=new Date().toISOString().split('T')[0];
 initBible();initAI();
 updOutline();updStats();updCheck();updStatus();updTimer();renderBank();renderNotes();renderTags();
 setTimeout(()=>toast('Bem-vindo ao Púlpito — Que Deus abençoe sua pregação!','success'),600);
+
+// ── AUTO-SYNC ─────────────────────────────────────────────────────────────────
+const syncIndicator=document.getElementById('sync-indicator');
+const syncLabel=document.getElementById('sync-label');
+const syncDot=document.getElementById('sync-dot');
+
+async function autoSync(silent=true){
+  if(!silent){syncIndicator.style.display='flex';syncDot.style.animation='spin 1s linear infinite';syncLabel.textContent='Sincronizando…';}
+  const before=getLib().length;
+  await mergeWithCloud();
+  const after=getLib().length;
+  if(!silent){
+    syncDot.style.animation='none';syncDot.style.background='#81c784';
+    syncLabel.textContent='Sincronizado ✓';
+    setTimeout(()=>{syncIndicator.style.display='none';syncDot.style.background='var(--gold)'},2500);
+  }
+  // Se a biblioteca estiver aberta, re-renderiza sem novo sync
+  if(document.getElementById('view-library').classList.contains('active'))renderLibLocal();
+  // Se vieram sermões novos da nuvem, mostra toast
+  if(after>before)toast(`${after-before} sermão(s) sincronizado(s) da nuvem ☁`,'success');
+}
+
+// Aguarda Puter carregar e faz sync inicial
+(async()=>{
+  let tries=0;
+  while((typeof puter==='undefined'||!puter.kv)&&tries++<15)await new Promise(r=>setTimeout(r,1000));
+  autoSync(false);
+})();
+
+// Sync a cada 45 segundos
+setInterval(()=>autoSync(true),45000);
+
+// Sync ao voltar ao app (trocar de aba/app no celular)
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoSync(true)});
 
 // ── MOBILE ────────────────────────────────────────────────────────────────────
 (function(){
