@@ -694,6 +694,7 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px
   <div class="lib-hdr">
     <div class="lib-title">Biblioteca de Sermões</div>
     <button class="btn btn-gold" id="btn-new-lib">+ Novo Sermão</button>
+    <button class="btn btn-g btn-sm" id="btn-sync-lib" title="Sincronizar com a nuvem">☁ Sincronizar</button>
     <div style="margin-left:auto;font-size:11px;color:var(--text-mid)" id="lib-count">0 sermões</div>
   </div>
   <div class="lib-grid" id="lib-grid"></div>
@@ -1380,22 +1381,59 @@ function clearData(){
   sVerses=[];notes=[];tags=[];
   renderBank();renderNotes();renderTags();updOutline();updStats();updCheck();updStatus();
 }
-function save(){
+async function save(){
   const d=getData();
   if(!d.title.trim()){toast('Adicione um título antes de salvar.','info');return}
   const lib=getLib();const idx=lib.findIndex(x=>x.id===d.id);
   if(idx>=0)lib[idx]=d;else{cid=d.id;lib.unshift(d)}
-  setLib(lib);toast('Sermão salvo!','success');
+  setLib(lib);
+  const ok=await cloudSave(lib);
+  toast(ok?'Sermão salvo e sincronizado ☁':'Sermão salvo localmente','success');
 }
 $('btn-save').addEventListener('click',save);
 $('btn-new').addEventListener('click',()=>{
   if(confirm('Criar um novo sermão? Salve o atual se necessário.'))clearData();
 });
-$('btn-new-lib').addEventListener('click',()=>{clearData();goEditor()});
+$('btn-new-lib').addEventListener('click',()=>{clearData();goEditor()})
+$('btn-sync-lib').addEventListener('click',()=>{toast('Sincronizando…','info');renderLib()});
+
+// ── CLOUD SYNC (Puter.js KV) ─────────────────────────────────────────────────
+const CLOUD_KEY='pulpito_v2_cloud';
+async function cloudSave(lib){
+  try{
+    if(typeof puter==='undefined'||!puter.kv)return false;
+    await puter.kv.set(CLOUD_KEY,JSON.stringify(lib));
+    return true;
+  }catch(e){return false}
+}
+async function cloudLoad(){
+  try{
+    if(typeof puter==='undefined'||!puter.kv)return null;
+    const v=await puter.kv.get(CLOUD_KEY);
+    return v?JSON.parse(v):null;
+  }catch(e){return null}
+}
+async function mergeWithCloud(){
+  const local=getLib();
+  const cloud=await cloudLoad();
+  if(cloud===null){
+    if(local.length)cloudSave(local);
+    return local;
+  }
+  const map={};
+  [...local,...cloud].forEach(s=>{
+    if(!map[s.id]||new Date(s.saved||0)>new Date(map[s.id].saved||0))map[s.id]=s;
+  });
+  const merged=Object.values(map).sort((a,b)=>new Date(b.saved||0)-new Date(a.saved||0));
+  setLib(merged);
+  cloudSave(merged);
+  return merged;
+}
 
 // ── LIBRARY ───────────────────────────────────────────────────────────────────
-function renderLib(){
-  const lib=getLib();
+async function renderLib(){
+  $('lib-grid').innerHTML=`<div style="text-align:center;padding:60px 30px;color:var(--gold);font-family:var(--fd);font-size:11px;letter-spacing:.12em;opacity:.8">☁ SINCRONIZANDO…</div>`;
+  const lib=await mergeWithCloud();
   $('lib-count').textContent=`${lib.length} sermão${lib.length!==1?'s':''}`;
   if(!lib.length){
     $('lib-grid').innerHTML=`<div class="empty-lib"><div class="empty-lib-icon">+</div><h3>Nenhum sermão salvo ainda</h3><p style="font-size:13px">Crie e salve seu primeiro sermão para vê-lo aqui.</p></div>`;
@@ -1432,9 +1470,11 @@ function openSermon(id){
     toast(`"${s.title}" carregado!`,'success');
   }
 }
-function delSermon(id){
+async function delSermon(id){
   if(!confirm('Excluir este sermão? Não pode ser desfeito.'))return;
-  setLib(getLib().filter(x=>x.id!==id));
+  const lib=getLib().filter(x=>x.id!==id);
+  setLib(lib);
+  cloudSave(lib);
   if(cid===id)clearData();
   renderLib();toast('Sermão excluído.','info');
 }
