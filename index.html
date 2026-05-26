@@ -699,6 +699,7 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px
     <div class="lib-title">Biblioteca de Sermões</div>
     <button class="btn btn-gold" id="btn-new-lib">+ Novo Sermão</button>
     <button class="btn btn-g btn-sm" id="btn-sync-lib" title="Sincronizar com a nuvem">☁ Sincronizar</button>
+    <div id="puter-status" style="display:flex;align-items:center"></div>
     <div style="margin-left:auto;font-size:11px;color:var(--text-mid)" id="lib-count">0 sermões</div>
   </div>
   <div class="lib-grid" id="lib-grid"></div>
@@ -1403,6 +1404,22 @@ $('btn-sync-lib').addEventListener('click',()=>{toast('Sincronizando…','info')
 
 // ── CLOUD SYNC (Puter.js KV) ─────────────────────────────────────────────────
 const CLOUD_KEY='pulpito_v2_cloud';
+
+async function getPuterUser(){
+  try{
+    if(typeof puter==='undefined'||!puter.auth)return null;
+    return await puter.auth.getUser();
+  }catch(e){return null}
+}
+
+async function puterLogin(){
+  try{
+    if(typeof puter==='undefined')return null;
+    await puter.auth.signIn();
+    return await puter.auth.getUser();
+  }catch(e){return null}
+}
+
 async function cloudSave(lib){
   try{
     if(typeof puter==='undefined'||!puter.kv)return false;
@@ -1418,6 +1435,8 @@ async function cloudLoad(){
   }catch(e){return null}
 }
 async function mergeWithCloud(){
+  const user=await getPuterUser();
+  if(!user)return getLib(); // sem login, sem sync entre devices
   const local=getLib();
   const cloud=await cloudLoad();
   if(cloud===null){
@@ -1432,6 +1451,23 @@ async function mergeWithCloud(){
   setLib(merged);
   cloudSave(merged);
   return merged;
+}
+
+async function updatePuterStatus(){
+  const el=document.getElementById('puter-status');
+  if(!el)return;
+  const user=await getPuterUser();
+  if(user){
+    el.innerHTML=`<span style="font-size:10px;color:#81c784;display:flex;align-items:center;gap:4px">☁ <strong>${esc(user.username||'Conectado')}</strong></span>`;
+  }else{
+    el.innerHTML=`<button id="btn-puter-login" class="btn btn-g btn-sm" style="font-size:10px;gap:4px">☁ Entrar para sincronizar</button>`;
+    document.getElementById('btn-puter-login')?.addEventListener('click',async()=>{
+      toast('Abrindo login do Puter…','info');
+      const u=await puterLogin();
+      if(u){toast('Logado! Sincronizando…','success');updatePuterStatus();renderLib();}
+      else toast('Login cancelado.','info');
+    });
+  }
 }
 
 // ── LIBRARY ───────────────────────────────────────────────────────────────────
@@ -1465,6 +1501,24 @@ function renderLibLocal(){
   }).join('');
 }
 async function renderLib(){
+  updatePuterStatus();
+  const user=await getPuterUser();
+  if(!user){
+    // Sem login: mostra biblioteca local + aviso de login
+    renderLibLocal();
+    $('lib-grid').insertAdjacentHTML('afterbegin',`
+      <div style="grid-column:1/-1;background:rgba(201,168,76,.07);border:1px solid var(--border-s);border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+        <span style="font-size:13px;color:var(--text-light)">☁ <strong>Entre com sua conta Puter</strong> para sincronizar sermões entre celular e computador.</span>
+        <button id="btn-puter-login-lib" class="btn btn-gold btn-sm">Entrar no Puter</button>
+      </div>`);
+    document.getElementById('btn-puter-login-lib')?.addEventListener('click',async()=>{
+      toast('Abrindo login do Puter…','info');
+      const u=await puterLogin();
+      if(u){toast('Logado! Sincronizando…','success');renderLib();}
+      else toast('Login cancelado.','info');
+    });
+    return;
+  }
   $('lib-grid').innerHTML=`<div style="text-align:center;padding:60px 30px;color:var(--gold);font-family:var(--fd);font-size:11px;letter-spacing:.12em;opacity:.8">☁ SINCRONIZANDO…</div>`;
   await mergeWithCloud();
   renderLibLocal();
@@ -2003,6 +2057,8 @@ const syncLabel=document.getElementById('sync-label');
 const syncDot=document.getElementById('sync-dot');
 
 async function autoSync(silent=true){
+  const user=await getPuterUser();
+  if(!user)return; // sem login, skip sync automático
   if(!silent){syncIndicator.style.display='flex';syncDot.style.animation='spin 1s linear infinite';syncLabel.textContent='Sincronizando…';}
   const before=getLib().length;
   await mergeWithCloud();
@@ -2012,9 +2068,8 @@ async function autoSync(silent=true){
     syncLabel.textContent='Sincronizado ✓';
     setTimeout(()=>{syncIndicator.style.display='none';syncDot.style.background='var(--gold)'},2500);
   }
-  // Se a biblioteca estiver aberta, re-renderiza sem novo sync
+  updatePuterStatus();
   if(document.getElementById('view-library').classList.contains('active'))renderLibLocal();
-  // Se vieram sermões novos da nuvem, mostra toast
   if(after>before)toast(`${after-before} sermão(s) sincronizado(s) da nuvem ☁`,'success');
 }
 
