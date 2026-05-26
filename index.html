@@ -698,8 +698,8 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px
   <div class="lib-hdr">
     <div class="lib-title">Biblioteca de Sermões</div>
     <button class="btn btn-gold" id="btn-new-lib">+ Novo Sermão</button>
-    <button class="btn btn-g btn-sm" id="btn-sync-lib" title="Sincronizar com a nuvem">☁ Sincronizar</button>
-    <div id="puter-status" style="display:flex;align-items:center;gap:6px"></div>
+    <button class="btn btn-g btn-sm" id="btn-export-lib" title="Exportar sermões como arquivo JSON">⬇ Exportar</button>
+    <button class="btn btn-g btn-sm" id="btn-import-lib" title="Importar sermões de arquivo JSON">⬆ Importar</button>
     <div style="margin-left:auto;font-size:11px;color:var(--text-mid)" id="lib-count">0 sermões</div>
   </div>
   <div class="lib-grid" id="lib-grid"></div>
@@ -1400,7 +1400,47 @@ $('btn-new').addEventListener('click',()=>{
   if(confirm('Criar um novo sermão? Salve o atual se necessário.'))clearData();
 });
 $('btn-new-lib').addEventListener('click',()=>{clearData();goEditor()})
-$('btn-sync-lib').addEventListener('click',()=>syncNow());
+$('btn-export-lib').addEventListener('click',exportLib);
+$('btn-import-lib').addEventListener('click',importLib);
+
+// ── EXPORT / IMPORT JSON ─────────────────────────────────────────────────────
+function exportLib(){
+  const lib=getLib();
+  if(!lib.length){toast('Nenhum sermão para exportar.','info');return;}
+  const date=new Date().toISOString().slice(0,10);
+  const blob=new Blob([JSON.stringify(lib,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='pulpito-sermoes-'+date+'.json';
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+  toast('Arquivo exportado: pulpito-sermoes-'+date+'.json ⬇','success');
+}
+function importLib(){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='.json,application/json';
+  inp.onchange=async e=>{
+    const file=e.target.files[0];
+    if(!file)return;
+    try{
+      const text=await file.text();
+      const incoming=JSON.parse(text);
+      if(!Array.isArray(incoming))throw new Error('formato inválido');
+      const local=getLib();
+      const map={};
+      [...local,...incoming].forEach(s=>{
+        if(s&&s.id){
+          if(!map[s.id]||new Date(s.saved||0)>new Date(map[s.id].saved||0))map[s.id]=s;
+        }
+      });
+      const merged=Object.values(map).sort((a,b)=>new Date(b.saved||0)-new Date(a.saved||0));
+      setLib(merged);
+      renderLibLocal();
+      toast('Importados '+incoming.length+' sermão(s)! Biblioteca atualizada ⬆','success');
+    }catch(err){toast('Erro ao ler arquivo: '+err.message,'info');}
+  };
+  inp.click();
+}
 
 // ── CLOUD SYNC (Puter.js KV) ─────────────────────────────────────────────────
 const CLOUD_KEY='pulpito_v2_cloud';
