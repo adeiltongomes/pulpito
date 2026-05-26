@@ -1400,7 +1400,7 @@ $('btn-new').addEventListener('click',()=>{
   if(confirm('Criar um novo sermão? Salve o atual se necessário.'))clearData();
 });
 $('btn-new-lib').addEventListener('click',()=>{clearData();goEditor()})
-$('btn-sync-lib').addEventListener('click',()=>{toast('Sincronizando…','info');renderLib()});
+$('btn-sync-lib').addEventListener('click',()=>syncNow());
 
 // ── CLOUD SYNC (Puter.js KV) ─────────────────────────────────────────────────
 const CLOUD_KEY='pulpito_v2_cloud';
@@ -1409,20 +1409,42 @@ async function getPuterUser(){
   try{
     if(typeof puter==='undefined'||!puter.auth)return null;
     const user=await puter.auth.getUser();
-    // Puter cria sessões anônimas (is_temp_user:true) — só aceita conta real
-    if(!user||user.is_temp_user===true)return null;
+    if(!user)return null;
+    // Ignora sessões temporárias/anônimas
+    if(user.is_temp_user===true||user.is_temp_user==='true')return null;
     return user;
   }catch(e){return null}
 }
 
-async function puterLogin(){
+// Sincronização manual: força login via popup e sincroniza
+async function syncNow(){
+  if(typeof puter==='undefined'){toast('Puter.js ainda carregando, aguarde…','info');return;}
   try{
-    if(typeof puter==='undefined')return null;
+    toast('Abrindo login do Puter…','info');
     await puter.auth.signIn();
-    const user=await puter.auth.getUser();
-    if(!user||user.is_temp_user===true)return null;
-    return user;
-  }catch(e){return null}
+  }catch(e){toast('Login cancelado.','info');return;}
+  const user=await puter.auth.getUser();
+  const nome=user?.username||user?.email||'usuário';
+  toast('Logado como '+nome+'. Sincronizando…','success');
+  updatePuterStatus();
+  $('lib-grid').innerHTML=`<div style="text-align:center;padding:60px 30px;color:var(--gold);font-family:var(--fd);font-size:11px;letter-spacing:.12em;opacity:.8">☁ SINCRONIZANDO…</div>`;
+  const local=getLib();
+  const cloud=await cloudLoad();
+  if(cloud!==null){
+    const map={};
+    [...local,...cloud].forEach(s=>{
+      if(!map[s.id]||new Date(s.saved||0)>new Date(map[s.id].saved||0))map[s.id]=s;
+    });
+    const merged=Object.values(map).sort((a,b)=>new Date(b.saved||0)-new Date(a.saved||0));
+    setLib(merged);
+    await cloudSave(merged);
+    toast('Biblioteca sincronizada! '+merged.length+' sermão(s) ☁','success');
+  }else{
+    if(local.length)await cloudSave(local);
+    toast('Dados enviados para a nuvem! ☁','success');
+  }
+  renderLibLocal();
+  updatePuterStatus();
 }
 
 async function cloudSave(lib){
@@ -1461,18 +1483,12 @@ async function mergeWithCloud(){
 async function updatePuterStatus(){
   const el=document.getElementById('puter-status');
   if(!el)return;
-  el.innerHTML=`<span style="font-size:10px;color:var(--text-mid)">verificando…</span>`;
   const user=await getPuterUser();
   if(user){
-    el.innerHTML=`<span style="font-size:10px;color:#81c784;display:flex;align-items:center;gap:4px">☁ <strong>${esc(user.username||'Conectado')}</strong></span>`;
+    el.innerHTML=`<span style="font-size:10px;color:#81c784;display:flex;align-items:center;gap:4px">☁ <strong>${esc(user.username||user.email||'Conectado')}</strong></span>`;
   }else{
     el.innerHTML=`<button id="btn-puter-login" class="btn btn-gold btn-sm" style="font-size:11px">☁ Entrar para Sincronizar</button>`;
-    document.getElementById('btn-puter-login')?.addEventListener('click',async()=>{
-      toast('Abrindo login do Puter…','info');
-      const u=await puterLogin();
-      if(u){toast('Logado como '+u.username+'! Sincronizando…','success');updatePuterStatus();renderLib();}
-      else toast('Login não concluído.','info');
-    });
+    document.getElementById('btn-puter-login')?.addEventListener('click',()=>syncNow());
   }
 }
 
