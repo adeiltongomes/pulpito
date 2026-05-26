@@ -1450,8 +1450,9 @@ async function getPuterUser(){
     if(typeof puter==='undefined'||!puter.auth)return null;
     const user=await puter.auth.getUser();
     if(!user)return null;
-    // Ignora sessões temporárias/anônimas
-    if(user.is_temp_user===true||user.is_temp_user==='true')return null;
+    // Ignora qualquer sessão anônima/temporária
+    if(user.is_temp_user)return null;
+    if(!user.email&&!user.username)return null;
     return user;
   }catch(e){return null}
 }
