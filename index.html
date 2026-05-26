@@ -698,8 +698,8 @@ header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px
   <div class="lib-hdr">
     <div class="lib-title">Biblioteca de Sermões</div>
     <button class="btn btn-gold" id="btn-new-lib">+ Novo Sermão</button>
-    <button class="btn btn-g btn-sm" id="btn-export-lib" title="Exportar sermões como arquivo JSON">⬇ Exportar</button>
-    <button class="btn btn-g btn-sm" id="btn-import-lib" title="Importar sermões de arquivo JSON">⬆ Importar</button>
+    <button class="btn btn-g btn-sm" id="btn-sync-lib" title="Sincronizar com a nuvem Puter">☁ Sincronizar</button>
+    <div id="puter-status" style="display:flex;align-items:center;gap:6px"></div>
     <div style="margin-left:auto;font-size:11px;color:var(--text-mid)" id="lib-count">0 sermões</div>
   </div>
   <div class="lib-grid" id="lib-grid"></div>
@@ -1392,6 +1392,7 @@ async function save(){
   const lib=getLib();const idx=lib.findIndex(x=>x.id===d.id);
   if(idx>=0)lib[idx]=d;else{cid=d.id;lib.unshift(d)}
   setLib(lib);
+  renderLibLocal();
   const ok=await cloudSave(lib);
   toast(ok?'Sermão salvo e sincronizado ☁':'Sermão salvo localmente','success');
 }
@@ -1400,8 +1401,7 @@ $('btn-new').addEventListener('click',()=>{
   if(confirm('Criar um novo sermão? Salve o atual se necessário.'))clearData();
 });
 $('btn-new-lib').addEventListener('click',()=>{clearData();goEditor()})
-$('btn-export-lib').addEventListener('click',exportLib);
-$('btn-import-lib').addEventListener('click',importLib);
+$('btn-sync-lib').addEventListener('click',()=>syncNow());
 
 // ── EXPORT / IMPORT JSON ─────────────────────────────────────────────────────
 function exportLib(){
@@ -1458,16 +1458,32 @@ async function getPuterUser(){
 
 // Sincronização manual: força login via popup e sincroniza
 async function syncNow(){
-  if(typeof puter==='undefined'){toast('Puter.js ainda carregando, aguarde…','info');return;}
-  try{
-    toast('Abrindo login do Puter…','info');
-    await puter.auth.signIn();
-  }catch(e){toast('Login cancelado.','info');return;}
-  const user=await puter.auth.getUser();
+  toast('Iniciando sync…','info');
+  if(typeof puter==='undefined'||!puter.auth){
+    toast('Puter.js não carregou ainda. Aguarde e tente novamente.','info');
+    return;
+  }
+  // Verifica se já está logado com conta real
+  let user=await getPuterUser();
+  if(!user){
+    toast('Abrindo login do Puter… (permita o popup se solicitado)','info');
+    try{
+      await puter.auth.signIn();
+      user=await getPuterUser();
+    }catch(e){
+      const msg=String(e?.message||e);
+      if(msg.includes('popup')||msg.includes('blocked')){
+        toast('Popup bloqueado! Clique no ícone de popup na barra do navegador.','info');
+      }else{
+        toast('Login não concluído. Tente novamente.','info');
+      }
+      return;
+    }
+  }
+  if(!user){toast('Faça login no Puter para sincronizar.','info');return;}
   const nome=user?.username||user?.email||'usuário';
   toast('Logado como '+nome+'. Sincronizando…','success');
   updatePuterStatus();
-  $('lib-grid').innerHTML=`<div style="text-align:center;padding:60px 30px;color:var(--gold);font-family:var(--fd);font-size:11px;letter-spacing:.12em;opacity:.8">☁ SINCRONIZANDO…</div>`;
   const local=getLib();
   const cloud=await cloudLoad();
   if(cloud!==null){
@@ -1478,10 +1494,10 @@ async function syncNow(){
     const merged=Object.values(map).sort((a,b)=>new Date(b.saved||0)-new Date(a.saved||0));
     setLib(merged);
     await cloudSave(merged);
-    toast('Biblioteca sincronizada! '+merged.length+' sermão(s) ☁','success');
+    toast('Sincronizado! '+merged.length+' sermão(s) ☁','success');
   }else{
     if(local.length)await cloudSave(local);
-    toast('Dados enviados para a nuvem! ☁','success');
+    toast('Sermões enviados para a nuvem! ☁','success');
   }
   renderLibLocal();
   updatePuterStatus();
@@ -1563,13 +1579,11 @@ function renderLibLocal(){
   }).join('');
 }
 async function renderLib(){
+  // Mostra sermões locais imediatamente, sem esperar cloud
+  renderLibLocal();
   updatePuterStatus();
   const user=await getPuterUser();
-  if(!user){
-    renderLibLocal();
-    return;
-  }
-  $('lib-grid').innerHTML=`<div style="text-align:center;padding:60px 30px;color:var(--gold);font-family:var(--fd);font-size:11px;letter-spacing:.12em;opacity:.8">☁ SINCRONIZANDO…</div>`;
+  if(!user)return;
   await mergeWithCloud();
   renderLibLocal();
 }
